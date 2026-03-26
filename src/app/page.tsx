@@ -159,7 +159,7 @@ export default function Home() {
                     <p className="text-muted-foreground">주소를 검색해주세요</p>
                   )}
                 </div>
-                <Button onClick={handleSearch} className="text-base shrink-0 cursor-pointer">
+                <Button onClick={handleSearch} className="text-base shrink-0 cursor-pointer rounded-none h-auto">
                   검색
                 </Button>
               </div>
@@ -172,7 +172,7 @@ export default function Home() {
                 placeholder=""
                 value={detail}
                 onChange={(e) => setDetail(e.target.value)}
-                className="text-base"
+                className="text-base min-h-10 py-2"
               />
             </div>
 
