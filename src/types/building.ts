@@ -1,0 +1,29 @@
+export interface AddressInfo {
+  jibunAddress: string;
+  buildingName: string;
+  sigunguCd: string;
+  bjdongCd: string;
+  bun: string;
+  ji: string;
+}
+
+export interface AreaResult {
+  dong: string | null;
+  ho: string;
+  flrNo: number | null;
+  exclusiveArea: number;
+  exclusiveAreaPy: number;
+  commonArea: number;
+  commonAreaPy: number;
+  supplyArea: number;
+  supplyAreaPy: number;
+  typeName: string | null;
+  typeMismatch: boolean;
+}
+
+export interface BuildingInfo {
+  mainPurpose: string | null;
+  useAprDay: string | null;
+  groundFloors: number | null;
+  undergroundFloors: number | null;
+}

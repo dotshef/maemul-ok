@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import path from "path";
 
 const API_KEY = process.env.BUILDING_API_KEY ?? "";
 const API_URL =
@@ -6,6 +8,34 @@ const API_URL =
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RawRow = Record<string, any>;
+
+interface TypeInfo {
+  type: string;
+  area: number;
+}
+
+async function lookupType(buildingCode: string, ho: string): Promise<TypeInfo | null> {
+  try {
+    const indexPath = path.join(process.cwd(), "public", "data", "index.json");
+    const indexData = JSON.parse(await readFile(indexPath, "utf-8"));
+    const csvFile = indexData[buildingCode];
+    if (!csvFile) return null;
+
+    const csvPath = path.join(process.cwd(), "public", "data", csvFile);
+    const csvText = await readFile(csvPath, "utf-8");
+    const lines = csvText.trim().split("\n").slice(1); // skip header
+
+    for (const line of lines) {
+      const [csvHo, csvType, csvArea] = line.split(",");
+      if (csvHo.trim() === ho) {
+        return { type: csvType.trim(), area: parseFloat(csvArea.trim()) };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 async function fetchRows(
   params: Record<string, string>
@@ -121,6 +151,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // 해당 층 추출 (전유 row에서)
+    let flrNo: number | null = null;
+    for (const row of rows) {
+      const kind = String(row.exposPubuseGbCdNm ?? "");
+      if (kind.includes("전유") && row.flrNo) {
+        flrNo = Number(row.flrNo);
+        break;
+      }
+    }
+
     const supplyArea = exclusiveArea + commonArea;
     const toPyeong = (m2: number) =>
       Math.round((m2 / 3.306) * 100) / 100;
@@ -136,15 +176,33 @@ export async function GET(req: NextRequest) {
     })));
     console.log("[area] 면적 결과:", { exclusiveArea, commonArea, supplyArea });
 
+    // CSV에서 타입 정보 조회
+    const typeInfo = await lookupType(buildingCode, ho);
+    let typeName: string | null = null;
+    let typeMismatch = false;
+
+    if (typeInfo) {
+      const roundedSupply = Math.round(supplyArea * 100) / 100;
+      if (typeInfo.area === roundedSupply) {
+        typeName = typeInfo.type;
+      } else {
+        typeMismatch = true;
+        console.log("[area] 타입 면적 불일치:", { csv: typeInfo.area, apiSupply: roundedSupply });
+      }
+    }
+
     return NextResponse.json({
       dong: dong || null,
       ho,
+      flrNo,
       exclusiveArea: Math.round(exclusiveArea * 100) / 100,
       exclusiveAreaPy: toPyeong(exclusiveArea),
       commonArea: Math.round(commonArea * 100) / 100,
       commonAreaPy: toPyeong(commonArea),
       supplyArea: Math.round(supplyArea * 100) / 100,
       supplyAreaPy: toPyeong(supplyArea),
+      typeName,
+      typeMismatch,
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === "TimeoutError") {

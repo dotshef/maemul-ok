@@ -1,47 +1,106 @@
-# 건축물대장 면적 조회 서비스 — 구현 태스크
+# page-refactor.md 기반 페이지 리팩토링 계획
 
-## 현재 상태
-- Next.js 16.2.1 + React 19 + Tailwind v4 설치됨
-- shadcn 미설치
-- 페이지/API Route 없음 (보일러플레이트만 존재)
+## 배경
+
+`reference/page-refactor.md` 기준으로 조회 결과를 4개 섹션으로 구성한다.
+현재는 면적 정보만 표시 중이며, 기본 정보·층수를 추가하고 소유자는 보류한다.
 
 ---
 
-## 구현 순서
+## 1단계: API 확장
 
-### STEP 0. 환경 세팅
-- [ ] shadcn/ui 초기화 (`npx shadcn@latest init`)
-- [ ] 필요한 shadcn 컴포넌트 설치 (Button, Input, Card, Label)
-- [ ] Pretendard 폰트 적용 (CDN 또는 next/font)
-- [ ] globals.css에 네이비 계열 테마 색상 정의
-- [ ] shadow 제거, font-sm 이하 미사용 규칙 적용
+### 1-1. 새 API 엔드포인트 생성: `/api/building`
 
-### STEP 1. API Route 구현 — `/api/area`
-- [ ] `src/app/api/area/route.ts` 생성
-- [ ] 요청 파라미터 수신: sigunguCd, bjdongCd, bun, ji, dong, ho
-- [ ] 건축물대장 전유공용면적 API 호출 (공공데이터포털)
-- [ ] 응답에서 dong/ho 매칭하여 전용·공용면적 추출
-- [ ] 공급면적 계산 (전용 + 공용)
-- [ ] 평수 환산 (÷ 3.306)
-- [ ] 에러 처리 (건물 없음, 동/호 불일치, API 오류 등)
-- [ ] `.env.local`에 `BUILDING_API_KEY` 환경변수 설정
+getBrTitleInfo (표제부) 호출용 라우트를 신규 생성한다.
 
-### STEP 2. 프론트엔드 — 주소 검색 + 입력 폼
-- [ ] 카카오 우편번호 SDK 스크립트 로드 (`layout.tsx` 또는 동적 로드)
-- [ ] 주소 검색 버튼 클릭 → 카카오 팝업 → bcode, jibunAddress 추출
-- [ ] bcode 파싱: sigunguCd (앞5자리), bjdongCd (뒤5자리)
-- [ ] jibunAddress 파싱: bun, ji (4자리 zero-padding)
-- [ ] 동/호 텍스트 입력 필드 (동은 선택, 호는 필수)
+- **엔드포인트**: `GET /api/building?sigunguCd=...&bjdongCd=...&bun=...&ji=...`
+- **호출 API**: `http://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo`
+- **응답 필드**:
+  | 필드 | 원본 키 | 설명 |
+  |------|---------|------|
+  | mainPurpose | mainPurpsCdNm | 용도 (예: 업무시설(오피스텔)) |
+  | useAprDay | useAprDay | 사용승인일 (예: "20130226") |
+  | groundFloors | grndFlrCnt | 지상 층수 |
+  | undergroundFloors | ugrndFlrCnt | 지하 층수 |
 
-### STEP 3. 프론트엔드 — 결과 조회 + 표시
-- [ ] "면적 조회" 버튼 → `/api/area` 호출
-- [ ] 로딩 상태 표시
-- [ ] 결과 카드: 전용면적, 공용면적, 공급면적 (㎡ + 평)
-- [ ] 에러 메시지 표시 (PRD 섹션5 기준)
-- [ ] "결과 복사" 버튼 (클립보드 복사)
+### 1-2. 기존 `/api/area` 수정
 
-### STEP 4. 페이지 조립 + 마무리
-- [ ] `src/app/page.tsx`에 전체 UI 조립
-- [ ] 반응형 레이아웃 확인
-- [ ] 큰 글씨 (50~60대 사용자 대상) 최종 확인
-- [ ] 보일러플레이트 정리 (기본 Next.js 코드 제거)
+- 응답에 `flrNo` (해당 층) 필드 추가 — 이미 API 응답에 포함되어 있으나 현재 무시 중
+
+### 1-3. 소유자 API — 보류
+
+- 공공데이터포털 건축소유자정보 API(dataset 15021136)는 폐지됨 (개인정보 보호)
+- 무료 공공 API로 소유자 정보 조회 불가
+- 향후 유료 API(bigvalue 등) 검토 또는 기능 제외 결정 필요
+- **page-refactor.md의 소유자 섹션은 이번 작업에서 제외**
+
+---
+
+## 2단계: 페이지 레이아웃
+
+### 조회 폼 (기존 유지)
+- 주소 검색 + 상세주소 입력 (가로 배치, 현행 유지)
+
+### 조회 결과 — 4개 섹션 (소유자 제외 시 3개)
+
+```
+┌─────────────────────────────────────────────┐
+│ 1. 기본 정보                                  │
+│   용도: 업무시설(오피스텔)                       │
+│   사용승인일: 2013.02.26                       │
+├─────────────────────────────────────────────┤
+│ 2. 면적                          (기존 2x2)   │
+│   타입 | 전용면적 | 공용면적 | 계약면적           │
+├─────────────────────────────────────────────┤
+│ 3. 층수                                      │
+│   해당 층: 4층 | 전체 층: 지상 20층 / 지하 4층   │
+└─────────────────────────────────────────────┘
+```
+
+- 각 섹션은 Card 또는 시각적으로 구분된 블록
+- 면적 섹션은 기존 2x2 그리드 유지
+- 기본 정보·층수는 단순 key-value 표시
+
+---
+
+## 3단계: 코드 구조
+
+### 3-1. 타입 정의 분리
+
+`src/types/building.ts` 생성:
+- `AddressInfo` — 주소 검색 결과 (기존)
+- `AreaResult` — 면적 조회 결과 (기존 + flrNo 추가)
+- `BuildingInfo` — 표제부 조회 결과 (신규)
+
+### 3-2. API 호출 함수 분리
+
+`src/lib/api.ts` 생성:
+- `fetchArea(params)` — /api/area 호출
+- `fetchBuilding(params)` — /api/building 호출
+- 두 API는 클라이언트에서 **병렬 호출** (Promise.all)
+
+### 3-3. 섹션 컴포넌트 분리
+
+`src/components/result/` 디렉토리:
+- `BasicInfoSection.tsx` — 용도, 사용승인일
+- `AreaSection.tsx` — 타입, 전용/공용/계약면적 (기존 2x2 그리드 이동)
+- `FloorSection.tsx` — 해당 층, 전체 층
+
+### 3-4. page.tsx 간소화
+
+- 상태 관리 + 폼 + 결과 섹션 조합만 담당
+- 각 섹션 컴포넌트에 props 전달
+
+---
+
+## 작업 순서 (체크리스트)
+
+- [ ] `src/types/building.ts` 생성 (타입 정의)
+- [ ] `src/app/api/building/route.ts` 생성 (getBrTitleInfo 호출)
+- [ ] `src/app/api/area/route.ts` 수정 (flrNo 응답 추가)
+- [ ] `src/lib/api.ts` 생성 (클라이언트 API 호출 함수)
+- [ ] `src/components/result/BasicInfoSection.tsx` 생성
+- [ ] `src/components/result/AreaSection.tsx` 생성
+- [ ] `src/components/result/FloorSection.tsx` 생성
+- [ ] `src/app/page.tsx` 리팩토링 (섹션 조합 구조)
+- [ ] 동작 확인 및 디버깅
