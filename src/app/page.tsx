@@ -160,7 +160,7 @@ export default function Home() {
       {areaResult && (
         <div className="w-full max-w-5xl mx-auto mt-6 space-y-6">
           {/* 1. 기본 정보 */}
-          {buildingInfo && <BasicInfoSection data={buildingInfo} />}
+          {buildingInfo && <BasicInfoSection building={buildingInfo} area={areaResult} />}
 
           {/* 2. 면적 */}
           <AreaSection data={areaResult} />

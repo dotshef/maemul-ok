@@ -61,7 +61,6 @@ export async function GET(req: NextRequest) {
     };
 
     return NextResponse.json({
-      mainPurpose: row.mainPurpsCdNm ?? null,
       useAprDay: formatDate(row.useAprDay),
       groundFloors: row.grndFlrCnt ? Number(row.grndFlrCnt) : null,
       undergroundFloors: row.ugrndFlrCnt ? Number(row.ugrndFlrCnt) : null,

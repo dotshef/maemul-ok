@@ -151,13 +151,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 해당 층 추출 (전유 row에서)
+    // 전유부 row에서 해당 층 + 건축물용도 추출
     let flrNo: number | null = null;
+    let mainPurpose: string | null = null;
     for (const row of rows) {
       const kind = String(row.exposPubuseGbCdNm ?? "");
-      if (kind.includes("전유") && row.flrNo) {
-        flrNo = Number(row.flrNo);
-        break;
+      if (kind.includes("전유")) {
+        if (!flrNo && row.flrNo) flrNo = Number(row.flrNo);
+        if (!mainPurpose && row.mainPurpsCdNm) mainPurpose = String(row.mainPurpsCdNm);
+        if (flrNo && mainPurpose) break;
       }
     }
 
@@ -195,6 +197,7 @@ export async function GET(req: NextRequest) {
       dong: dong || null,
       ho,
       flrNo,
+      mainPurpose,
       exclusiveArea: Math.round(exclusiveArea * 100) / 100,
       exclusiveAreaPy: toPyeong(exclusiveArea),
       commonArea: Math.round(commonArea * 100) / 100,

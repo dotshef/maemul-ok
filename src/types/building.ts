@@ -11,6 +11,7 @@ export interface AreaResult {
   dong: string | null;
   ho: string;
   flrNo: number | null;
+  mainPurpose: string | null;
   exclusiveArea: number;
   exclusiveAreaPy: number;
   commonArea: number;
@@ -22,7 +23,6 @@ export interface AreaResult {
 }
 
 export interface BuildingInfo {
-  mainPurpose: string | null;
   useAprDay: string | null;
   groundFloors: number | null;
   undergroundFloors: number | null;
