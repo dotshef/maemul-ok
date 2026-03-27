@@ -74,6 +74,7 @@ export default function Home() {
     new daum.Postcode({
       oncomplete(data: DaumPostcodeData) {
         const { sigunguCd, bjdongCd, bun, ji } = parseBuildingCode(data.buildingCode);
+        console.log("[address] buildingCode:", data.buildingCode, { sigunguCd, bjdongCd, bun, ji });
 
         setAddress({
           jibunAddress: data.jibunAddress || data.address,

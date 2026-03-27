@@ -39,6 +39,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const buildingCode = `${sigunguCd}_${bjdongCd}_${bun}_${ji}`;
+  console.log("[area] buildingCode:", buildingCode);
+
   if (!API_KEY) {
     return NextResponse.json(
       { error: "API 키가 설정되지 않았습니다." },
